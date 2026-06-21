@@ -119,48 +119,50 @@ Setup       Foundation   SEO Agent    Billing+     SEO Paid    Future
 
 ### 2.1 Website (project) management
 
-- [ ] Add website by domain (normalize URL → domain)
-- [ ] Domain verification flow (DNS TXT or meta tag) — v1 default
-- [ ] List / delete websites
-- [ ] Enforce free limit: **3 websites** per account
+- [x] Add website by domain (normalize URL → domain)
+- [x] Domain verification flow (DNS TXT or meta tag) — v1 default
+- [x] List / delete websites
+- [x] Enforce free limit: **3 websites** per account
 
 ### 2.2 Usage metering
 
-- [ ] `usage_periods` + `usage_counters`
-- [ ] Calendar month reset job
-- [ ] Enforce **10 scans/month**, **100 pages/scan**
-- [ ] Limit exceeded → upsell modal (hard block)
+- [x] `usage_periods` + `usage_counters`
+- [x] Calendar month reset job
+- [x] Enforce **10 scans/month**, **100 pages/scan**
+- [x] Limit exceeded → hard block (upsell modal deferred to Phase 3)
 
 ### 2.3 Scan pipeline
 
-- [ ] BullMQ worker process
-- [ ] `seo_scans` lifecycle: queued → running → completed/failed
-- [ ] Scan orchestrator runs checks:
-  - [ ] Sitemap check/generation (download, not host)
-  - [ ] Robots.txt check
-  - [ ] Schema check (JSON-LD / microdata basics)
-  - [ ] Broken link crawl (respect robots.txt, page cap)
-  - [ ] Index/noindex audit (meta robots + headers; no GSC)
-- [ ] `seo_scan_pages`, `seo_issues` persistence
+- [x] BullMQ worker process
+- [x] `seo_scans` lifecycle: queued → running → completed/failed
+- [x] Scan orchestrator runs checks:
+  - [x] Sitemap check/generation (download, not host)
+  - [x] Robots.txt check
+  - [x] Schema check (JSON-LD / microdata basics)
+  - [x] Broken link crawl (respect robots.txt, page cap)
+  - [x] Index/noindex audit (meta robots + headers; no GSC)
+- [x] `seo_scan_pages`, `seo_issues` persistence
 
 ### 2.4 Reports
 
-- [ ] In-app report view: issues grouped by category/severity
-- [ ] Fix instructions per issue (founder: "exact fixes")
-- [ ] `seo_reports` summary JSON
-- [ ] Scan history per website
+- [x] In-app report view: issues grouped by category/severity
+- [x] Fix instructions per issue (founder: "exact fixes")
+- [x] `seo_reports` summary JSON
+- [x] Scan history per website
 
 ### 2.5 Activation + analytics
 
-- [ ] On first `seo.scan.completed` → `agent_activations` insert
-- [ ] Hook for points (award in Phase 3)
+- [x] On first `seo.scan.completed` → `agent_activations` insert
+- [x] Hook for points (award in Phase 3)
+
+**Completed:** 2025-06-21 — see `docs/changelog.md` v0.3.0
 
 ### Exit criteria
 
 - Verified user adds 3 sites max
 - Full scan completes within page cap
 - Report shows actionable fixes
-- 11th scan in month is blocked with upsell CTA
+- 11th scan in month is blocked (upgrade CTA in Phase 3)
 - First scan triggers activation record
 
 ---

@@ -1,24 +1,28 @@
+import { createSeoScanWorker } from "@/lib/queue/seo-scan";
+
 /**
- * Background worker entrypoint (Phase 0 placeholder).
- * BullMQ job processors for SEO crawls ship in Phase 2.
- *
+ * Background worker — processes SEO scan jobs from Redis/BullMQ.
  * Run: npm run worker:dev
  */
-const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
+console.info("[worker] AgentPlatform worker starting");
+console.info(`[worker] Redis: ${process.env.REDIS_URL ?? "redis://localhost:6379"}`);
 
-console.info("[worker] AgentPlatform worker starting (Phase 0 placeholder)");
-console.info(`[worker] Redis target: ${REDIS_URL}`);
-console.info("[worker] No job processors registered yet — see docs/ROADMAP.md Phase 2");
+const worker = createSeoScanWorker();
+
+worker.on("completed", (job) => {
+  console.info(`[worker] SEO scan job ${job.id} completed`);
+});
+
+worker.on("failed", (job, error) => {
+  console.error(`[worker] SEO scan job ${job?.id} failed`, error);
+});
 
 function shutdown(signal: string) {
   console.info(`[worker] Received ${signal}, shutting down`);
-  process.exit(0);
+  worker.close().finally(() => process.exit(0));
 }
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-// Keep process alive in dev
-setInterval(() => {
-  // heartbeat — replaced by BullMQ worker in Phase 2
-}, 60_000);
+console.info("[worker] Listening for SEO scan jobs on queue: seo-scans");

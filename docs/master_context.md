@@ -246,7 +246,31 @@ npm run db:seed
 
 **User flow:** Register → verify email (link in console in dev) → login → `/dashboard`
 
-**Next phase:** Phase 2 — SEO Agent (free tier). See `docs/ROADMAP.md`.
+**Next phase:** Phase 3 — Billing, subscriptions, points. See `docs/ROADMAP.md`.
+
+### Phase 2 — SEO Agent (free tier) ✅ (2025-06-21)
+
+Website management, usage metering, scan pipeline, and in-app reports on the free tier.
+
+**Included:**
+
+- Add / list / delete websites (3-site limit)
+- Domain verification via meta tag on homepage
+- Usage metering: 10 scans/month, 100 pages/scan (calendar month UTC)
+- BullMQ scan worker: sitemap, robots.txt, schema, broken links, index/noindex
+- In-app reports with fix instructions per issue
+- Agent activation on first completed scan
+- SEO agent status `active` in registry
+
+**Excluded (as requested):**
+
+- Billing, Stripe, PayPal
+- Referrals, points
+- Upsell modals (hard block only)
+
+**Worker:** `npm run worker:dev` (Redis required)
+
+**User flow:** Dashboard → SEO Agent → add website → verify meta tag → run scan → view report
 
 ### Documentation index
 

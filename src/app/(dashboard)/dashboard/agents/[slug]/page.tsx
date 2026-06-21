@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Button, Card } from "@/components/ui/form";
-import { getAgentBySlug } from "@/lib/agents/registry";
+import { getAgentBySlug, isAgentNavigable } from "@/lib/agents/registry";
 
 export default async function AgentPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -9,6 +9,10 @@ export default async function AgentPage({ params }: { params: Promise<{ slug: st
 
   if (!agent) {
     notFound();
+  }
+
+  if (isAgentNavigable(agent)) {
+    redirect(agent.dashboardPath);
   }
 
   return (

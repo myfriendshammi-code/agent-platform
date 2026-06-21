@@ -8,7 +8,7 @@ const AGENTS = [
     slug: "seo",
     name: "SEO Agent",
     description: "Sitemap, robots.txt, schema, broken links, and SEO reports.",
-    status: AgentStatus.coming_soon,
+    status: AgentStatus.active,
     sortOrder: 1,
     iconKey: "search",
     freeLimits: {
@@ -123,11 +123,11 @@ async function main() {
 
   await prisma.systemMeta.upsert({
     where: { key: "schema_version" },
-    create: { key: "schema_version", value: "phase_1" },
-    update: { value: "phase_1" },
+    create: { key: "schema_version", value: "phase_2" },
+    update: { value: "phase_2" },
   });
 
-  console.info("[seed] Phase 1 seed complete");
+  console.info("[seed] Phase 2 seed complete");
 }
 
 main()

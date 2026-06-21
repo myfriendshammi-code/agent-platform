@@ -48,6 +48,38 @@ enum WebsiteVerificationMethod {
   html_file
 }
 
+enum SeoScanStatus {
+  queued
+  running
+  completed
+  failed
+  canceled
+}
+
+enum SeoScanType {
+  full
+  sitemap
+  robots
+  schema
+  links
+  index
+}
+
+enum SeoIssueCategory {
+  sitemap
+  robots
+  schema
+  broken_link
+  indexing
+  other
+}
+
+enum SeoIssueSeverity {
+  critical
+  warning
+  info
+}
+
 /// Phase 0 stub — kept for health check compatibility
 model SystemMeta {
   id        String   @id @default(uuid()) @db.Uuid
@@ -93,6 +125,8 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   agentActivations        AgentActivation[]
   websites                Website[]
+  usagePeriods            UsagePeriod[]
+  seoScans                SeoScan[]
   auditLogsAsActor        AuditLog[]               @relation("AuditActor")
   auditLogsAsTarget       AuditLog[]               @relation("AuditTarget")
 
@@ -182,6 +216,7 @@ model Agent {
 
   plans        AgentPlan[]
   activations  AgentActivation[]
+  usagePeriods UsagePeriod[]
 
   @@map("agents")
 }
@@ -238,6 +273,8 @@ model Website {
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization? @relation(fields: [organizationId], references: [id])
+  seoScans     SeoScan[]
+  seoIssues    SeoIssue[]
 
   @@unique([userId, domain])
   @@index([userId])
@@ -270,4 +307,106 @@ model FeatureFlag {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("feature_flags")
+}
+
+model UsagePeriod {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  agentId   String   @map("agent_id") @db.Uuid
+  period    String   @db.Char(7)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent    Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  counters UsageCounter[]
+
+  @@unique([userId, agentId, period])
+  @@map("usage_periods")
+}
+
+model UsageCounter {
+  id            String   @id @default(uuid()) @db.Uuid
+  usagePeriodId String   @map("usage_period_id") @db.Uuid
+  metric        String   @db.VarChar(50)
+  count         Int      @default(0)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  usagePeriod UsagePeriod @relation(fields: [usagePeriodId], references: [id], onDelete: Cascade)
+
+  @@unique([usagePeriodId, metric])
+  @@map("usage_counters")
+}
+
+model SeoScan {
+  id            String        @id @default(uuid()) @db.Uuid
+  userId        String        @map("user_id") @db.Uuid
+  websiteId     String        @map("website_id") @db.Uuid
+  status        SeoScanStatus @default(queued)
+  scanType      SeoScanType   @default(full) @map("scan_type")
+  pagesLimit    Int           @map("pages_limit")
+  pagesCrawled  Int           @default(0) @map("pages_crawled")
+  startedAt     DateTime?     @map("started_at") @db.Timestamptz(6)
+  completedAt   DateTime?     @map("completed_at") @db.Timestamptz(6)
+  errorMessage  String?       @map("error_message") @db.Text
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  website Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  pages   SeoScanPage[]
+  issues  SeoIssue[]
+  report  SeoReport?
+
+  @@index([websiteId, createdAt(sort: Desc)])
+  @@index([userId, status])
+  @@map("seo_scans")
+}
+
+model SeoScanPage {
+  id          String    @id @default(uuid()) @db.Uuid
+  scanId      String    @map("scan_id") @db.Uuid
+  url         String    @db.Text
+  statusCode  Int?      @map("status_code")
+  crawledAt   DateTime? @map("crawled_at") @db.Timestamptz(6)
+  metaRobots  String?   @map("meta_robots") @db.VarChar(255)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  scan SeoScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@map("seo_scan_pages")
+}
+
+model SeoIssue {
+  id              String           @id @default(uuid()) @db.Uuid
+  scanId          String           @map("scan_id") @db.Uuid
+  websiteId       String           @map("website_id") @db.Uuid
+  pageUrl         String?          @map("page_url") @db.Text
+  category        SeoIssueCategory
+  severity        SeoIssueSeverity
+  code            String           @db.VarChar(50)
+  message         String           @db.Text
+  fixInstruction  String           @map("fix_instruction") @db.Text
+  metadata        Json?
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  scan    SeoScan   @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  website Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([scanId, category])
+  @@index([websiteId, createdAt(sort: Desc)])
+  @@map("seo_issues")
+}
+
+model SeoReport {
+  id         String   @id @default(uuid()) @db.Uuid
+  scanId     String   @unique @map("scan_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  websiteId  String   @map("website_id") @db.Uuid
+  summary    Json     @default("{}")
+  storageUrl String?  @map("storage_url") @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  scan SeoScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@map("seo_reports")
 }

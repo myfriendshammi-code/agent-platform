@@ -138,6 +138,20 @@ Platform foundation: authentication, dashboard shell, agent registry, minimal ad
 
 ## [Unreleased]
 
-### Planned — Phase 2: SEO Agent (free tier)
+---
 
-See `docs/ROADMAP.md`.
+## [0.3.0] — 2025-06-21 — Phase 2 complete
+
+SEO Agent MVP on the free tier: website management, domain verification, usage metering, BullMQ scan pipeline, and in-app reports.
+
+**Key routes:** `/dashboard/agents/seo`, `/dashboard/agents/seo/websites/[id]`, `/dashboard/agents/seo/scans/[id]`
+
+**API:** `/api/agents/seo/websites`, `/api/agents/seo/scans`, `/api/agents/seo/usage`
+
+**Worker:** `npm run worker:dev` (requires Redis via `docker compose up -d`)
+
+**Free tier limits:** 3 websites, 10 scans/month, 100 pages/scan
+
+**Not built:** billing, PayPal, Stripe, referrals, points, upsell modals.
+
+**Setup:** `npm run db:migrate:dev` then `npm run db:seed` to activate SEO agent.
