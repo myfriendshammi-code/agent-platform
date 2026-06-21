@@ -1,0 +1,91 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Production / deploy
+.vercel
+.netlify
+
+# Environment variables (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+prisma/migrations/**/migration_lock.toml.bak
+
+# Docker (local overrides only — keep docker-compose.yml tracked)
+docker-compose.override.yml
+docker-compose.*.local.yml
+.docker/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE / editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+*~
+
+# Certificates / keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Debug / cache
+.cache/
+.turbo/
+.eslintcache
+.stylelintcache
+
+# Optional: local data volumes (if mounted into repo)
+postgres_data/
+redis_data/
+
+# Sentry / observability local
+.sentryclirc
