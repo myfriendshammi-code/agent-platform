@@ -61,6 +61,11 @@ export function PodOutreachDashboard({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [discoverNiches, setDiscoverNiches] = useState(
+    "dog mom mug\nnurse life shirt\nfunny cat POD\ngolf gift shop",
+  );
+  const [discoverStatus, setDiscoverStatus] = useState<string | null>(null);
+  const [discoverRunning, setDiscoverRunning] = useState(false);
   const [editSubject, setEditSubject] = useState(initialLeads[0]?.subject ?? "");
   const [editBody, setEditBody] = useState(initialLeads[0]?.bodyText ?? "");
 
@@ -152,6 +157,95 @@ export function PodOutreachDashboard({
     form.reset();
     await refresh();
     router.refresh();
+  }
+
+  async function pollDiscoverJob(jobId: string) {
+    const maxAttempts = 120;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const response = await fetch(
+        `/api/agents/pod-outreach/discover?jobId=${encodeURIComponent(jobId)}`,
+      );
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to check discover status");
+      }
+      const data = (await response.json()) as {
+        state: string;
+        progress?: {
+          phase: string;
+          urlsTried: number;
+          leadsSaved: number;
+          target: number;
+          noEmailSkipped: number;
+        } | null;
+        result?: { leadsSaved: number; urlsTried: number; noEmailSkipped: number; target: number };
+        error?: string | null;
+      };
+
+      if (data.progress) {
+        setDiscoverStatus(
+          `${data.progress.phase}: ${data.progress.leadsSaved}/${data.progress.target} leads (${data.progress.urlsTried} URLs checked, ${data.progress.noEmailSkipped} no email)`,
+        );
+      }
+
+      if (data.state === "completed" && data.result) {
+        setDiscoverStatus(
+          `Done — ${data.result.leadsSaved}/${data.result.target} leads saved (${data.result.urlsTried} URLs, ${data.result.noEmailSkipped} contact-form only).`,
+        );
+        setSuccess(
+          `Found ${data.result.leadsSaved} outreach-ready leads with draft emails. Review and send below.`,
+        );
+        await refresh();
+        router.refresh();
+        return;
+      }
+
+      if (data.state === "failed") {
+        throw new Error(data.error ?? "Discover job failed");
+      }
+    }
+    throw new Error("Discover timed out — check worker is running (npm run worker:dev)");
+  }
+
+  async function runDiscover(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDiscoverRunning(true);
+    setError(null);
+    setSuccess(null);
+    setDiscoverStatus("Starting…");
+
+    const niches = discoverNiches
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (niches.length === 0) {
+      setError("Enter at least one niche keyword (one per line)");
+      setDiscoverRunning(false);
+      setDiscoverStatus(null);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/agents/pod-outreach/discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ niches, target: 20 }),
+      });
+      const data = (await response.json()) as { error?: string; jobId?: string };
+      if (!response.ok) {
+        throw new Error(data.error ?? "Failed to start discover");
+      }
+      if (!data.jobId) throw new Error("No job id returned");
+      setDiscoverStatus("Running — checking contact pages…");
+      await pollDiscoverJob(data.jobId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Discover failed");
+      setDiscoverStatus(null);
+    } finally {
+      setDiscoverRunning(false);
+    }
   }
 
   async function regenerateAll() {
@@ -278,7 +372,7 @@ export function PodOutreachDashboard({
         </Link>
         <h1 className="mt-2 text-2xl font-bold">POD Outreach</h1>
         <p className="mt-1 text-muted-foreground">
-          Import up to {maxLeads} POD leads, review personalized emails, and send up to{" "}
+          Find Shopify leads automatically or import CSV — review draft emails and send up to{" "}
           {usage.limit}/day for MockupExpo sales.
         </p>
       </div>
@@ -317,6 +411,35 @@ export function PodOutreachDashboard({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <h2 className="font-semibold">Find leads (automatic)</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Serper finds Shopify stores; system extracts public emails and writes draft
+            outreach. Target: 20 leads per run. Requires SERPER_API_KEY env + worker running.
+          </p>
+          <form onSubmit={runDiscover} className="mt-4 space-y-3">
+            <div>
+              <Label htmlFor="discover-niches">Niche keywords (one per line)</Label>
+              <textarea
+                id="discover-niches"
+                className="mt-1 min-h-[100px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                value={discoverNiches}
+                onChange={(e) => setDiscoverNiches(e.target.value)}
+                disabled={discoverRunning || leads.length >= maxLeads}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={discoverRunning || loading || leads.length >= maxLeads}
+            >
+              {discoverRunning ? "Finding leads…" : "Find 20 leads"}
+            </Button>
+            {discoverStatus && (
+              <p className="text-sm text-muted-foreground">{discoverStatus}</p>
+            )}
+          </form>
+        </Card>
+
         <Card>
           <h2 className="font-semibold">Import leads (CSV)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -367,7 +490,9 @@ export function PodOutreachDashboard({
           <h2 className="font-semibold">Lead list</h2>
           <div className="mt-4 max-h-[520px] space-y-2 overflow-y-auto">
             {filteredLeads.length === 0 && (
-              <p className="text-sm text-muted-foreground">No leads yet. Import a CSV to start.</p>
+              <p className="text-sm text-muted-foreground">
+                No leads yet. Click Find leads or import a CSV to start.
+              </p>
             )}
             {filteredLeads.map((lead) => (
               <button
