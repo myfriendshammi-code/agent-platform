@@ -12,6 +12,29 @@ const credentialsSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        token.emailVerified = user.emailVerified;
+      }
+
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, emailVerified: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.emailVerified = dbUser.emailVerified;
+        }
+      }
+
+      return token;
+    },
+  },
   providers: [
     Credentials({
       name: "credentials",

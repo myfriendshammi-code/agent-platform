@@ -45,9 +45,11 @@ npm run db:migrate:dev
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3001](http://localhost:3001).
 
-Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health)
+Health check: [http://localhost:3001/api/health](http://localhost:3001/api/health)
+
+> AgentPlatform always runs on **port 3001** locally (`npm run dev`) so it does not conflict with other apps on 3000.
 
 ## Scripts
 

@@ -45,6 +45,18 @@ const AGENTS = [
     iconKey: "image",
     freeLimits: {},
   },
+  {
+    slug: "pod-outreach",
+    name: "POD Outreach",
+    description: "Import POD leads, generate outreach emails, and send for MockupExpo sales.",
+    status: AgentStatus.active,
+    sortOrder: 5,
+    iconKey: "mail",
+    freeLimits: {
+      leads_max: 50,
+      sends_per_day: 20,
+    },
+  },
 ] as const;
 
 async function seedAgents() {
@@ -117,9 +129,21 @@ async function seedAdmin() {
   console.info(`[seed] Super admin ready: ${email}`);
 }
 
+async function ensureFounderAdmin() {
+  const founderEmail = "info@yesiwillbuy.com";
+  const updated = await prisma.user.updateMany({
+    where: { email: founderEmail },
+    data: { role: UserRole.super_admin },
+  });
+  if (updated.count > 0) {
+    console.info(`[seed] Ensured ${founderEmail} is super_admin`);
+  }
+}
+
 async function main() {
   await seedAgents();
   await seedAdmin();
+  await ensureFounderAdmin();
 
   await prisma.systemMeta.upsert({
     where: { key: "schema_version" },

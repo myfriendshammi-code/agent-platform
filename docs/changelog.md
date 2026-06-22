@@ -140,6 +140,34 @@ Platform foundation: authentication, dashboard shell, agent registry, minimal ad
 
 ---
 
+## [0.4.1] — 2025-06-21 — Stabilization fix
+
+- Pin dev server to port **3001** (`scripts/dev.mjs` frees zombie processes, clears stale `.next` when needed)
+- Fix broken CSS after restart (stale Next.js process serving 404 on `/_next/static/css/*`)
+- Refresh JWT role from database so admin changes apply without re-login
+- Ensure `info@yesiwillbuy.com` is `super_admin` on seed
+- Update `NEXT_PUBLIC_APP_URL` default to `http://localhost:3001`
+
+---
+
+## [0.4.0] — 2025-06-21 — POD Outreach MVP
+
+Admin-only agent for MockupExpo sales outreach: CSV import, personalized emails, review screen, SMTP send (20/day cap).
+
+**Route:** `/dashboard/agents/pod-outreach` (admin+ only)
+
+**API:** `/api/agents/pod-outreach/leads`, `/import`, `/generate`, `/leads/[id]`, `/leads/[id]/send`
+
+**Sample CSV:** `docs/sample-pod-leads.csv`
+
+**SMTP env:** `POD_SMTP_*` in `.env.example`
+
+**Not built:** discovery scrapers, email finder, billing, referrals, points.
+
+**Setup:** `npm run db:migrate` then `npm run db:seed` (requires Postgres).
+
+---
+
 ## [0.3.0] — 2025-06-21 — Phase 2 complete
 
 SEO Agent MVP on the free tier: website management, domain verification, usage metering, BullMQ scan pipeline, and in-app reports.

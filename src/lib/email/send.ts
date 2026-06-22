@@ -8,7 +8,7 @@ export type EmailPayload = {
 export async function sendEmail(payload: EmailPayload): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM ?? "noreply@agentplatform.local";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 
   if (!apiKey) {
     console.info("\n--- [dev email] ---");
@@ -42,7 +42,7 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
 }
 
 export function verificationEmail(to: string, token: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const link = `${appUrl}/verify-email/${token}`;
 
   return {
@@ -54,7 +54,7 @@ export function verificationEmail(to: string, token: string) {
 }
 
 export function passwordResetEmail(to: string, token: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const link = `${appUrl}/reset-password/${token}`;
 
   return {

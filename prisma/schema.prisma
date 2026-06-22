@@ -80,6 +80,13 @@ enum SeoIssueSeverity {
   info
 }
 
+enum PodLeadStatus {
+  draft
+  sent
+  replied
+  interested
+}
+
 /// Phase 0 stub — kept for health check compatibility
 model SystemMeta {
   id        String   @id @default(uuid()) @db.Uuid
@@ -127,6 +134,7 @@ model User {
   websites                Website[]
   usagePeriods            UsagePeriod[]
   seoScans                SeoScan[]
+  podLeads                PodLead[]
   auditLogsAsActor        AuditLog[]               @relation("AuditActor")
   auditLogsAsTarget       AuditLog[]               @relation("AuditTarget")
 
@@ -409,4 +417,28 @@ model SeoReport {
   scan SeoScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
 
   @@map("seo_reports")
+}
+
+model PodLead {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  email     String        @db.VarChar(255)
+  name      String?       @db.VarChar(255)
+  shopName  String?       @map("shop_name") @db.VarChar(255)
+  shopUrl   String?       @map("shop_url") @db.Text
+  niche     String?       @db.VarChar(255)
+  notes     String?       @db.Text
+  status    PodLeadStatus @default(draft)
+  subject   String?       @db.Text
+  bodyHtml  String?       @map("body_html") @db.Text
+  bodyText  String?       @map("body_text") @db.Text
+  sentAt    DateTime?     @map("sent_at") @db.Timestamptz(6)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, email])
+  @@index([userId, status])
+  @@map("pod_leads")
 }

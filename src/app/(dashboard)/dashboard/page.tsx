@@ -1,8 +1,19 @@
 import { AgentCard } from "@/components/dashboard/agent-card";
 import { listAgents } from "@/lib/agents/registry";
+import { auth } from "@/lib/auth/config";
+import { hasMinimumRole } from "@/lib/auth/roles";
+import { UserRole } from "@prisma/client";
 
 export default async function DashboardPage() {
+  const session = await auth();
+  const isAdmin = session?.user?.role
+    ? hasMinimumRole(session.user.role, UserRole.admin)
+    : false;
+
   const agents = await listAgents();
+  const visibleAgents = agents.filter(
+    (agent) => agent.slug !== "pod-outreach" || isAdmin,
+  );
 
   return (
     <div>
@@ -14,7 +25,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
-        {agents.map((agent) => (
+        {visibleAgents.map((agent) => (
           <AgentCard key={agent.slug} agent={agent} />
         ))}
       </div>
