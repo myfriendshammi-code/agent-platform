@@ -1,12 +1,10 @@
 /**
- * End-to-end Lead Finder verification (Serper → contact email → pod_leads).
+ * End-to-end Lead Finder verification (Serper → vendor filter → email → pod_leads).
  * Usage: npx tsx scripts/verify-lead-finder.ts [userId]
  */
 import "dotenv/config";
 import { prisma } from "../src/lib/db";
-import { findEmailOnShop } from "../src/lib/lead-finder/contact-email";
-import { searchShopifyStores } from "../src/lib/lead-finder/serper";
-import { generateOutreachEmail } from "../src/lib/pod-outreach/generate-email";
+import { runLeadDiscover } from "../src/lib/lead-finder/run-discover";
 
 async function main() {
   if (!process.env.SERPER_API_KEY?.trim()) {
@@ -24,80 +22,49 @@ async function main() {
   }
 
   const userId = process.argv[2] ?? admin.id;
-  const niche = "dog mom mug";
-  const seenUrls = new Set<string>();
+  const niches = ["dog mom mug", "funny dog shirt", "pet lover gift", "custom dog mug"];
+  const target = 5;
+  const runStartedAt = new Date();
 
-  console.log("Step 1: Serper store discovery…");
-  const stores = await searchShopifyStores(niche, seenUrls);
-  if (stores.length === 0) {
-    console.error("FAIL: No store URLs discovered");
-    process.exit(1);
+  console.log(`Running discover for niches: ${niches.join(", ")} (target ${target})…\n`);
+  const result = await runLeadDiscover(userId, niches, target);
+
+  console.log("1. URLs discovered:", result.urlsDiscovered);
+  console.log("2. vendorSkipped:", result.vendorSkipped);
+  if (result.vendorReason) {
+    console.log("   vendorReason (last):", result.vendorReason);
   }
-  console.log(`OK: ${stores.length} store URL(s) discovered`);
-  console.log(`  Example: ${stores[0].url}`);
+  console.log("3. emails extracted:", result.emailsExtracted);
+  console.log("4. leads saved:", result.leadsSaved);
+  console.log(`   (urlsTried: ${result.urlsTried}, noEmailSkipped: ${result.noEmailSkipped})`);
 
-  console.log("Step 2: Contact-page email extraction…");
-  let saved: {
-    email: string;
-    shopUrl: string;
-    shopName: string;
-    subject: string;
-  } | null = null;
-
-  for (const shop of stores) {
-    const found = await findEmailOnShop(shop.url);
-    if (!found) continue;
-    console.log(`OK: Email extracted: ${found.email} from ${shop.url}`);
-    saved = {
-      email: found.email,
-      shopUrl: shop.url,
-      shopName: found.shopName ?? shop.title,
-      subject: "",
-    };
-    break;
-  }
-
-  if (!saved) {
-    console.error("FAIL: No email extracted from discovered stores (try more URLs in a full run)");
-    process.exit(1);
-  }
-
-  const emailContent = generateOutreachEmail({
-    name: null,
-    shopName: saved.shopName,
-    shopUrl: saved.shopUrl,
-    niche,
-  });
-  saved.subject = emailContent.subject;
-
-  console.log("Step 3: Save lead to pod_leads with draft outreach…");
-  const testEmail = saved.email;
-  await prisma.podLead.deleteMany({ where: { userId, email: testEmail } }).catch(() => {});
-
-  const lead = await prisma.podLead.create({
-    data: {
+  const savedLeads = await prisma.podLead.findMany({
+    where: {
       userId,
-      email: testEmail,
-      shopName: saved.shopName,
-      shopUrl: saved.shopUrl,
-      niche,
-      notes: "lead-finder:verify",
-      subject: emailContent.subject,
-      bodyHtml: emailContent.bodyHtml,
-      bodyText: emailContent.bodyText,
+      notes: "lead-finder:auto",
+      createdAt: { gte: runStartedAt },
     },
+    orderBy: { createdAt: "asc" },
+    take: 5,
+    select: { shopName: true, email: true, shopUrl: true },
   });
 
-  console.log("OK: Lead saved to pod_leads");
-  console.log(`  id: ${lead.id}`);
-  console.log(`  email: ${lead.email}`);
-  console.log(`  subject: ${lead.subject}`);
+  console.log("\n5. First saved leads:");
+  if (savedLeads.length === 0) {
+    console.error("FAIL: No merchant leads saved in this run");
+    process.exit(1);
+  }
+  for (const lead of savedLeads) {
+    console.log(`   - ${lead.shopName ?? "(no name)"} | ${lead.email} | ${lead.shopUrl}`);
+  }
 
-  console.log("\n=== E2E VERIFICATION PASSED ===");
-  console.log("1. Store URL discovered: yes");
-  console.log("2. Email extracted: yes");
-  console.log("3. Lead saved to pod_leads: yes");
-  console.log("4. Outreach draft generated: yes");
+  const vendorLead = savedLeads.find((l) => l.email.includes("customily.com"));
+  if (vendorLead) {
+    console.error("\nFAIL: Saved lead looks like a Shopify app vendor:", vendorLead.email);
+    process.exit(1);
+  }
+
+  console.log("\n=== VERIFICATION PASSED ===");
 }
 
 main()

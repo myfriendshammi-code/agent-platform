@@ -6,6 +6,7 @@ import {
 } from "@/lib/lead-finder/constants";
 import { searchShopifyStores } from "@/lib/lead-finder/serper";
 import { normalizeShopUrl } from "@/lib/lead-finder/normalize-url";
+import { fetchShopHomepage, getVendorSkipReason } from "@/lib/lead-finder/vendor-filter";
 import { MAX_LEADS } from "@/lib/pod-outreach/admin-guard";
 import { generateOutreachEmail } from "@/lib/pod-outreach/generate-email";
 
@@ -17,14 +18,20 @@ export type DiscoverProgress = {
   target: number;
   duplicatesSkipped: number;
   noEmailSkipped: number;
+  vendorSkipped: number;
+  vendorReason: string | null;
   message?: string;
 };
 
 export type DiscoverResult = {
   leadsSaved: number;
   urlsTried: number;
+  urlsDiscovered: number;
   duplicatesSkipped: number;
   noEmailSkipped: number;
+  vendorSkipped: number;
+  vendorReason: string | null;
+  emailsExtracted: number;
   target: number;
 };
 
@@ -61,6 +68,9 @@ export async function runLeadDiscover(
   let leadsSaved = 0;
   let duplicatesSkipped = 0;
   let noEmailSkipped = 0;
+  let vendorSkipped = 0;
+  let vendorReason: string | null = null;
+  let emailsExtracted = 0;
 
   const report = async (phase: DiscoverProgress["phase"], message?: string) => {
     await onProgress?.({
@@ -71,6 +81,8 @@ export async function runLeadDiscover(
       target: effectiveTarget,
       duplicatesSkipped,
       noEmailSkipped,
+      vendorSkipped,
+      vendorReason,
       message,
     });
   };
@@ -96,12 +108,25 @@ export async function runLeadDiscover(
     urlsTried++;
     await report("extracting");
 
+    const homepageHtml = await fetchShopHomepage(normalized);
+    if (homepageHtml) {
+      const skipReason = getVendorSkipReason(homepageHtml);
+      if (skipReason) {
+        vendorSkipped++;
+        vendorReason = skipReason;
+        console.info(`[lead-finder] vendorSkipped url=${normalized} vendorReason=${skipReason}`);
+        await report("extracting");
+        continue;
+      }
+    }
+
     const found = await findEmailOnShop(normalized);
     if (!found) {
       noEmailSkipped++;
       continue;
     }
 
+    emailsExtracted++;
     const email = found.email.toLowerCase();
     if (seenEmails.has(email)) {
       duplicatesSkipped++;
@@ -146,8 +171,12 @@ export async function runLeadDiscover(
   return {
     leadsSaved,
     urlsTried,
+    urlsDiscovered: queue.length,
     duplicatesSkipped,
     noEmailSkipped,
+    vendorSkipped,
+    vendorReason,
+    emailsExtracted,
     target: effectiveTarget,
   };
 }

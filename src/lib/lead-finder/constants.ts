@@ -67,6 +67,20 @@ export const BLOCKED_LOCAL_PARTS = new Set([
   "unsubscribe",
 ]);
 
+/** Homepage copy signals a Shopify app vendor, agency, or SaaS — skip before email extraction. */
+export const VENDOR_SKIP_KEYWORDS = [
+  "shopify app",
+  "app store",
+  "personalizer",
+  "agency",
+  "partner program",
+  "shopify partner",
+  "saas",
+  "software platform",
+  "book a demo",
+  "request a demo",
+] as const;
+
 /** Prefer these local parts when multiple valid emails exist. */
 export const PREFERRED_LOCAL_PARTS = [
   "hello",
