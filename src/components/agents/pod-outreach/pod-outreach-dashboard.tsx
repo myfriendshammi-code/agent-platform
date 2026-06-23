@@ -13,6 +13,7 @@ type Lead = {
   name: string | null;
   shopName: string | null;
   shopUrl: string | null;
+  emailSourceUrl: string | null;
   niche: string | null;
   status: LeadStatus;
   subject: string | null;
@@ -505,8 +506,11 @@ export function PodOutreachDashboard({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{lead.shopName ?? lead.email}</p>
+                    <p className="truncate font-medium">{lead.shopName ?? "—"}</p>
                     <p className="truncate text-xs text-muted-foreground">{lead.email}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {lead.emailSourceUrl ?? "—"}
+                    </p>
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${STATUS_COLORS[lead.status]}`}
@@ -526,22 +530,22 @@ export function PodOutreachDashboard({
           ) : (
             <div className="mt-4 space-y-4">
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
-                <p>
-                  <span className="text-muted-foreground">To:</span> {selectedLead.email}
-                </p>
-                {selectedLead.shopUrl && (
-                  <p className="mt-1 truncate">
-                    <span className="text-muted-foreground">Shop:</span>{" "}
+                <p className="font-medium">{selectedLead.shopName ?? "—"}</p>
+                <p className="mt-1">{selectedLead.email}</p>
+                <p className="mt-1 truncate text-muted-foreground">
+                  {selectedLead.emailSourceUrl ? (
                     <a
-                      href={selectedLead.shopUrl}
+                      href={selectedLead.emailSourceUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="underline"
                     >
-                      {selectedLead.shopUrl}
+                      {selectedLead.emailSourceUrl}
                     </a>
-                  </p>
-                )}
+                  ) : (
+                    "—"
+                  )}
+                </p>
               </div>
 
               <div>

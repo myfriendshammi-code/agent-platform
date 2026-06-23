@@ -426,6 +426,7 @@ model PodLead {
   name      String?       @db.VarChar(255)
   shopName  String?       @map("shop_name") @db.VarChar(255)
   shopUrl   String?       @map("shop_url") @db.Text
+  emailSourceUrl String?  @map("email_source_url") @db.Text
   niche     String?       @db.VarChar(255)
   notes     String?       @db.Text
   status    PodLeadStatus @default(draft)

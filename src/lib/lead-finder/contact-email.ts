@@ -8,13 +8,14 @@ import { extractEmailCandidates, selectShopEmail } from "@/lib/lead-finder/valid
 export type ShopEmailResult = {
   email: string;
   shopName: string | null;
+  emailSourceUrl: string;
 };
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchPage(url: string): Promise<string | null> {
+async function fetchPage(url: string): Promise<{ html: string; finalUrl: string } | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -32,7 +33,7 @@ async function fetchPage(url: string): Promise<string | null> {
     if (!contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
       return null;
     }
-    return await response.text();
+    return { html: await response.text(), finalUrl: response.url };
   } catch {
     return null;
   } finally {
@@ -45,6 +46,19 @@ function parseTitle(html: string): string | null {
   return match?.[1]?.trim().replace(/\s*[-|].*$/, "").trim() ?? null;
 }
 
+function sourceUrlForEmail(
+  email: string,
+  pages: Array<{ finalUrl: string; candidates: ReturnType<typeof extractEmailCandidates> }>,
+): string {
+  const target = email.toLowerCase();
+  for (const page of pages) {
+    if (page.candidates.some((c) => c.email.toLowerCase() === target)) {
+      return page.finalUrl;
+    }
+  }
+  return pages.at(-1)?.finalUrl ?? "";
+}
+
 /**
  * Attempt to find a merchant email on public store pages.
  * Returns null when only a contact form exists (no extractable email).
@@ -53,20 +67,31 @@ export async function findEmailOnShop(shopUrl: string): Promise<ShopEmailResult 
   const base = shopUrl.replace(/\/+$/, "");
   let shopName: string | null = null;
   const allCandidates = [];
+  const pages: Array<{
+    finalUrl: string;
+    candidates: ReturnType<typeof extractEmailCandidates>;
+  }> = [];
 
   for (let i = 0; i < CONTACT_PATHS.length; i++) {
     if (i > 0) await sleep(FETCH_DELAY_MS);
     const path = CONTACT_PATHS[i];
     const pageUrl = path === "/" ? `${base}/` : `${base}${path}`;
-    const html = await fetchPage(pageUrl);
-    if (!html) continue;
+    const fetched = await fetchPage(pageUrl);
+    if (!fetched) continue;
 
+    const { html, finalUrl } = fetched;
     if (!shopName) shopName = parseTitle(html);
-    allCandidates.push(...extractEmailCandidates(html));
+    const pageCandidates = extractEmailCandidates(html);
+    pages.push({ finalUrl, candidates: pageCandidates });
+    allCandidates.push(...pageCandidates);
 
     const email = selectShopEmail(allCandidates, shopUrl);
     if (email) {
-      return { email, shopName };
+      return {
+        email,
+        shopName,
+        emailSourceUrl: sourceUrlForEmail(email, pages),
+      };
     }
   }
 

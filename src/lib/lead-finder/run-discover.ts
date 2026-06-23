@@ -147,6 +147,7 @@ export async function runLeadDiscover(
           email,
           shopName: found.shopName ?? shop.title,
           shopUrl: normalized,
+          emailSourceUrl: found.emailSourceUrl,
           niche: shop.niche,
           notes: "lead-finder:auto",
           subject: emailContent.subject,
