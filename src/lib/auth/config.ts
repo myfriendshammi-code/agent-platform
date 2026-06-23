@@ -22,13 +22,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { role: true, emailVerified: true },
-        });
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.emailVerified = dbUser.emailVerified;
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true, emailVerified: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.emailVerified = dbUser.emailVerified;
+          }
+        } catch {
+          // DB temporarily unavailable — keep existing token claims
         }
       }
 

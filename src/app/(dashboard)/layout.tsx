@@ -1,9 +1,19 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { isStaffRole } from "@/lib/auth/roles";
 import { DashboardNav } from "@/components/dashboard/nav";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  let session;
+  try {
+    session = await auth();
+  } catch {
+    redirect("/login");
+  }
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/20">
