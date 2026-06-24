@@ -1,15 +1,13 @@
 import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
-import { PodOutreachDashboard } from "@/components/agents/pod-outreach/pod-outreach-dashboard";
+import { LeadFinderDashboard } from "@/components/agents/pod-outreach/pod-outreach-dashboard";
 import { auth } from "@/lib/auth/config";
 import { hasMinimumRole } from "@/lib/auth/roles";
 import { getAgentBySlug } from "@/lib/agents/registry";
+import { MAX_LEADS } from "@/lib/lead-finder/admin-guard";
 import { prisma } from "@/lib/db";
-import { MAX_LEADS } from "@/lib/pod-outreach/admin-guard";
-import { getDailySendUsage } from "@/lib/pod-outreach/daily-limit";
-import { getSmtpStatus } from "@/lib/pod-outreach/send-email";
 
-export default async function PodOutreachPage() {
+export default async function LeadFinderPage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
@@ -24,24 +22,25 @@ export default async function PodOutreachPage() {
     redirect("/dashboard");
   }
 
-  const [leads, usage, smtp] = await Promise.all([
-    prisma.podLead.findMany({
-      where: { userId: session.user.id },
-      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    }),
-    getDailySendUsage(session.user.id),
-    Promise.resolve(getSmtpStatus()),
-  ]);
+  const leads = await prisma.podLead.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
-    <PodOutreachDashboard
+    <LeadFinderDashboard
       initialLeads={leads.map((lead) => ({
-        ...lead,
-        sentAt: lead.sentAt?.toISOString() ?? null,
+        id: lead.id,
+        email: lead.email,
+        shopName: lead.shopName,
+        shopUrl: lead.shopUrl,
+        emailSourceUrl: lead.emailSourceUrl,
+        niche: lead.niche,
+        leadType: lead.leadType,
+        confidenceScore: lead.confidenceScore,
+        notes: lead.notes,
         createdAt: lead.createdAt.toISOString(),
       }))}
-      initialUsage={usage}
-      smtpConfigured={smtp.configured}
       maxLeads={MAX_LEADS}
     />
   );

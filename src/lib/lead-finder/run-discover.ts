@@ -7,8 +7,8 @@ import {
 import { searchShopifyStores } from "@/lib/lead-finder/serper";
 import { normalizeShopUrl } from "@/lib/lead-finder/normalize-url";
 import { fetchShopHomepage, getVendorSkipReason } from "@/lib/lead-finder/vendor-filter";
-import { MAX_LEADS } from "@/lib/pod-outreach/admin-guard";
-import { generateOutreachEmail } from "@/lib/pod-outreach/generate-email";
+import { MAX_LEADS } from "@/lib/lead-finder/admin-guard";
+import { classifyMerchantLead } from "@/lib/lead-finder/classify-lead";
 
 export type DiscoverProgress = {
   phase: "searching" | "extracting" | "done" | "failed";
@@ -49,7 +49,7 @@ export async function runLeadDiscover(
   const existingCount = await prisma.podLead.count({ where: { userId } });
   const slotsRemaining = Math.max(0, MAX_LEADS - existingCount);
   if (slotsRemaining === 0) {
-    throw new Error(`Lead limit reached (${MAX_LEADS}). Delete leads before discovering more.`);
+    throw new Error(`Lead limit reached (${MAX_LEADS}). Export or delete leads before discovering more.`);
   }
 
   const effectiveTarget = Math.min(target, slotsRemaining);
@@ -133,26 +133,39 @@ export async function runLeadDiscover(
       continue;
     }
 
-    const emailContent = generateOutreachEmail({
-      name: null,
-      shopName: found.shopName ?? shop.title,
+    const shopName = found.shopName ?? shop.title;
+    const { leadType, confidenceScore } = classifyMerchantLead({
+      email,
       shopUrl: normalized,
+      shopName,
+      emailSource: found.emailSource,
       niche: shop.niche,
     });
+
+    if (leadType === "App company") {
+      vendorSkipped++;
+      vendorReason = "app company";
+      continue;
+    }
+
+    if (leadType === "Vendor/service provider" && confidenceScore < 50) {
+      vendorSkipped++;
+      vendorReason = "vendor/service provider";
+      continue;
+    }
 
     try {
       await prisma.podLead.create({
         data: {
           userId,
           email,
-          shopName: found.shopName ?? shop.title,
+          shopName,
           shopUrl: normalized,
           emailSourceUrl: found.emailSourceUrl,
+          leadType,
+          confidenceScore,
           niche: shop.niche,
           notes: "lead-finder:auto",
-          subject: emailContent.subject,
-          bodyHtml: emailContent.bodyHtml,
-          bodyText: emailContent.bodyText,
         },
       });
       seenEmails.add(email);
@@ -167,7 +180,7 @@ export async function runLeadDiscover(
     }
   }
 
-  await report("done", `Saved ${leadsSaved} outreach-ready leads.`);
+  await report("done", `Saved ${leadsSaved} merchant leads.`);
 
   return {
     leadsSaved,

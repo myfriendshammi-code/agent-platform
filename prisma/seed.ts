@@ -47,14 +47,13 @@ const AGENTS = [
   },
   {
     slug: "pod-outreach",
-    name: "POD Outreach",
-    description: "Import POD leads, generate outreach emails, and send for MockupExpo sales.",
+    name: "Lead Finder",
+    description: "Discover Shopify merchant emails by niche and export CSV.",
     status: AgentStatus.active,
     sortOrder: 5,
-    iconKey: "mail",
+    iconKey: "users",
     freeLimits: {
-      leads_max: 50,
-      sends_per_day: 20,
+      leads_max: 500,
     },
   },
 ] as const;

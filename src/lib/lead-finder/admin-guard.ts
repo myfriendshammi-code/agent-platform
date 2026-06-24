@@ -3,11 +3,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { hasMinimumRole } from "@/lib/auth/roles";
 
-export const POD_OUTREACH_SLUG = "pod-outreach";
-export const MAX_LEADS = 50;
-export const MAX_SENDS_PER_DAY = 20;
+export const LEAD_FINDER_SLUG = "pod-outreach";
+export const MAX_LEADS = 500;
 
-export async function requirePodOutreachAdmin() {
+export async function requireLeadFinderAdmin() {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };

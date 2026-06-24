@@ -9,6 +9,7 @@ export type ShopEmailResult = {
   email: string;
   shopName: string | null;
   emailSourceUrl: string;
+  emailSource: "mailto" | "text";
 };
 
 function sleep(ms: number): Promise<void> {
@@ -59,6 +60,18 @@ function sourceUrlForEmail(
   return pages.at(-1)?.finalUrl ?? "";
 }
 
+function sourceForEmail(
+  email: string,
+  pages: Array<{ finalUrl: string; candidates: ReturnType<typeof extractEmailCandidates> }>,
+): "mailto" | "text" {
+  const target = email.toLowerCase();
+  for (const page of pages) {
+    const match = page.candidates.find((c) => c.email.toLowerCase() === target);
+    if (match) return match.source;
+  }
+  return "text";
+}
+
 /**
  * Attempt to find a merchant email on public store pages.
  * Returns null when only a contact form exists (no extractable email).
@@ -91,6 +104,7 @@ export async function findEmailOnShop(shopUrl: string): Promise<ShopEmailResult 
         email,
         shopName,
         emailSourceUrl: sourceUrlForEmail(email, pages),
+        emailSource: sourceForEmail(email, pages),
       };
     }
   }

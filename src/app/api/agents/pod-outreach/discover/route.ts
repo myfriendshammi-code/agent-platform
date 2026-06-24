@@ -7,10 +7,10 @@ import {
   type DiscoverProgress,
   type DiscoverResult,
 } from "@/lib/queue/pod-discover";
-import { requirePodOutreachAdmin } from "@/lib/pod-outreach/admin-guard";
+import { requireLeadFinderAdmin } from "@/lib/lead-finder/admin-guard";
 
 export async function POST(request: Request) {
-  const authResult = await requirePodOutreachAdmin();
+  const authResult = await requireLeadFinderAdmin();
   if (authResult.error) return authResult.error;
 
   if (!isSerperConfigured()) {
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const authResult = await requirePodOutreachAdmin();
+  const authResult = await requireLeadFinderAdmin();
   if (authResult.error) return authResult.error;
 
   const jobId = new URL(request.url).searchParams.get("jobId");
